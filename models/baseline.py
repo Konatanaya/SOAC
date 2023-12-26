@@ -293,13 +293,3 @@ class SA2C(nn.Module):
         return prediction
 
 
-if __name__ == '__main__':
-    # a = torch.LongTensor([[0,1,2,3,4,5,6,7,8,9]])
-    # l = 10
-
-    state = torch.LongTensor([[0, 1, 2, 3, 4, 5, 6, 7, 9, 9],
-                              [1, 2, 3, 4, 5, 6, 7, 8, 9, 9],
-                              [1, 2, 3, 4, 5, 6, 7, 8, 9, 9]]).to('cuda:1')
-    l = torch.LongTensor([8, 8, 8])
-    net = QNetwork(10, 64, 10, 0.01, 10, 'NItNet', 'None', 'cuda:1').to('cuda:1')
-    net(state, l)
