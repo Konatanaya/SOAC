@@ -11,9 +11,9 @@ import csv
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run nive double q learning.")
+    parser = argparse.ArgumentParser(description="RL+RS.")
 
-    parser.add_argument('--epoch', type=int, default=100000, help='Number of max epochs.')
+    parser.add_argument('--epoch', type=int, default=200000, help='Number of max epochs.')
     parser.add_argument('--data', nargs='?', default='RC15', help='data directory, i.e., RC15 and Kaggle')
     parser.add_argument('--batch_size', type=int, default=256, help='Batch size.')
     parser.add_argument('--hidden_dim', type=int, default=64, help='Number of hidden factors, i.e., embedding size.')
