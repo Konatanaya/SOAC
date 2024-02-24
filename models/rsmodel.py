@@ -7,7 +7,7 @@ class GRU(nn.Module):
         super(GRU, self).__init__()
         self.state_size = state_size
         self.hidden_size = hidden_size
-        self.gru = nn.GRU(self.hidden_size, self.hidden_size, num_layers=1, batch_first=True)
+        self.gru = nn.GRU(self.state_size, self.hidden_size, num_layers=1, batch_first=True)
         self.apply(self._init_weights)
 
     def _init_weights(self, module):

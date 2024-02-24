@@ -56,17 +56,6 @@ class QNetwork(nn.Module):
         mask = torch.unsqueeze((state != self.item_num).float(), -1)
         if self.rs_model == 'GRU':
             state_hidden = self.head(input_embeddings, state_length)
-        elif self.rs_model == 'Caser':
-            input_embeddings *= mask
-            input_embeddings = torch.unsqueeze(input_embeddings, 1)
-            state_hidden = self.head(input_embeddings)
-        elif self.rs_model == 'SASRec':
-            pos_embeddings = self.pos_embeddings(torch.tile(torch.arange(state.shape[1]).unsqueeze(0), (state.shape[0], 1)).to(self.device))
-            seq = input_embeddings + pos_embeddings
-            state_hidden = self.head(seq, mask, state_length)
-        elif self.rs_model == 'NItNet':
-            input_embeddings *= mask
-            state_hidden = self.head(input_embeddings, mask, state_length)
 
         logits = self.logits(state_hidden)
 
