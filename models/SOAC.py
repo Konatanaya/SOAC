@@ -122,7 +122,7 @@ class SOAC(nn.Module):
             ips = torch.where(ips > 0.01, ips, 0.01)
             ips = torch.where(ips < self.ips_upper, ips, self.ips_upper)
             ips /= torch.mean(ips)
-            ips = ips * current_main_qs.gather(1, action)
+            ips = ips * (current_main_qs.gather(1, action) - (current_main_qs * F.softmax(logits, dim=1)).sum(-1, keepdims=True))
 
 
         num_logits = logits.size(1)
