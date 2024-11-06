@@ -51,12 +51,14 @@ class QNetwork(nn.Module):
             nn.init.xavier_normal_(m.weight)
             nn.init.constant_(m.bias, 0)
 
-    def forward(self, state, state_length):
+    def state_encoder(self, state, state_length):
         input_embeddings = self.state_embeddings(state)
         mask = torch.unsqueeze((state != self.item_num).float(), -1)
         if self.rs_model == 'GRU':
             state_hidden = self.head(input_embeddings, state_length)
+        return state_hidden
 
+    def forward(self, state_hidden):
         logits = self.logits(state_hidden)
 
         v = self.v(state_hidden)
@@ -104,11 +106,13 @@ class SOAC(nn.Module):
         reward = reward.unsqueeze(-1)
         is_done = is_done.unsqueeze(-1)
 
-        logits, log_probs, beta_logits, beta_log_probs, current_main_qs = main_Q(state, state_len)
+        state_hidden = main_Q.state_encoder(state, state_len)
+        logits, log_probs, beta_logits, beta_log_probs, current_main_qs = main_Q(state_hidden)
         #
         with torch.no_grad():
-            next_logits, next_log_probs, _, _, next_main_qs = main_Q(next_state, next_state_len)
-            _, _, _, _, next_target_qs = target_Q(next_state, next_state_len)
+            next_state_hidden = main_Q.state_encoder(next_state, next_state_len)
+            next_logits, next_log_probs, _, _, next_main_qs = main_Q(next_state_hidden)
+            _, _, _, _, next_target_qs = target_Q(next_state_hidden)
 
             next_probs = next_log_probs.exp()
             next_probs = (next_probs / next_probs.max(1, keepdim=True)[0] > self.threshold).float()
@@ -123,7 +127,6 @@ class SOAC(nn.Module):
             ips = torch.where(ips < self.ips_upper, ips, self.ips_upper)
             ips /= torch.mean(ips)
             ips = ips * (current_main_qs.gather(1, action) - (current_main_qs * F.softmax(logits, dim=1)).sum(-1, keepdims=True))
-
 
         num_logits = logits.size(1)
         batch_size = logits.size(0)
@@ -172,20 +175,16 @@ class SOAC(nn.Module):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
     def predict(self, state, state_length):
-        logits, _, _, _, _ = self.main_net(state, state_length)
+        state_hidden = self.main_net.state_encoder(state, state_length)
+        logits, _, _, _, _ = self.main_net(state_hidden)
         prediction = torch.argsort(logits)[:, -20:]
         return prediction
-
 
 def unique_and_padding(mat, padding_idx, dim=-1):
     samples, _ = torch.sort(mat, dim=dim)
     samples_roll = torch.roll(samples, -1, dims=dim)
     samples_diff = samples - samples_roll
     samples_diff[:, -1] = 1  # deal with the edge case that there is only one unique sample in a row
-    samples_mask = torch.bitwise_not(samples_diff == 0)  # unique mask
-    samples *= samples_mask.to(dtype=samples.dtype)
-    samples += (1 - samples_mask.to(dtype=samples.dtype)) * padding_idx
-    samples, _ = torch.sort(samples, dim=dim)
-    # shrink size to max unique length
-    samples = torch.unique(samples, dim=dim)
+
+    samples = torch.where(samples_diff == 0, padding_idx, samples)
     return samples
